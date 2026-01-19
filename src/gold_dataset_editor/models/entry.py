@@ -85,6 +85,7 @@ INTENTION_TYPES = [
     "book_appointment",
     "reschedule_appointment",
     "cancel_appointment",
+    "ask_about_the_price",
 ]
 
 # Slot type definitions (ordered for UI display)
@@ -145,6 +146,8 @@ SLOT_OPTIONS: dict[str, list[str]] = {
         "laser_blepharoplasty",
         "intimate_area_whitening",
         "focus_rejuvenation",
+        "heel_treatment",
+        "pms",
         "other",
     ],
     "hair_removal_areas": [
