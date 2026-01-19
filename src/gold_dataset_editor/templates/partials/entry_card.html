@@ -1,0 +1,136 @@
+<div class="entry-card {% if has_unsaved %}unsaved{% endif %}" data-entry-index="{{ index }}">
+    <!-- Entry ID -->
+    <div class="entry-id">
+        <span class="label">ID:</span>
+        <span class="value">{{ entry.id }}</span>
+        {% if has_unsaved %}
+        <span class="unsaved-badge">Unsaved</span>
+        {% endif %}
+    </div>
+
+    <!-- Message -->
+    <div class="message-section">
+        <h3>Message</h3>
+        <div class="message-box {% if entry.message.role == 'client' %}client{% else %}brand{% endif %}">
+            <select class="role-select" onchange="updateMessageRole(this.value)">
+                <option value="client" {% if entry.message.role == 'client' %}selected{% endif %}>client</option>
+                <option value="brand" {% if entry.message.role == 'brand' %}selected{% endif %}>brand</option>
+            </select>
+            <p class="text">{{ entry.message.text if entry.message.text else entry.message }}</p>
+        </div>
+    </div>
+
+    <!-- Context -->
+    {% if entry.context %}
+    <div class="context-section">
+        <h3>Context <span class="count">({{ entry.context|length }})</span></h3>
+        <div class="context-messages">
+            {% for msg in entry.context %}
+            <div class="context-msg {% if msg.role == 'client' %}client{% else %}brand{% endif %}">
+                <select class="role-select" onchange="updateContextRole({{ loop.index0 }}, this.value)">
+                    <option value="client" {% if msg.role == 'client' %}selected{% endif %}>client</option>
+                    <option value="brand" {% if msg.role == 'brand' %}selected{% endif %}>brand</option>
+                </select>
+                <span class="text">{{ msg.text }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Slots Form -->
+    <div class="slots-section">
+        <h3>Slots</h3>
+        <form id="slots-form" class="slots-form">
+            <!-- String Slots -->
+            {% for slot in string_slots %}
+            <div class="slot-row string-slot" data-slot="{{ slot }}">
+                <label for="slot-{{ slot }}">{{ slot }}</label>
+                <div class="slot-input-group">
+                    <input type="text"
+                           id="slot-{{ slot }}"
+                           name="{{ slot }}"
+                           value="{{ entry.gold.slots[slot] | slot_value }}"
+                           placeholder="null"
+                           class="slot-input {% if slot == 'number_phone' %}validate-phone{% endif %}"
+                           onchange="updateSlot('{{ slot }}', this.value)"
+                           onfocus="setActiveSlot('{{ slot }}')">
+                    <button type="button" class="clear-btn" onclick="clearSlot('{{ slot }}')" title="Set to null">
+                        &times;
+                    </button>
+                </div>
+                <div class="validation-warning" id="warning-{{ slot }}"></div>
+            </div>
+            {% endfor %}
+
+            <!-- Boolean Slots (Tri-state) -->
+            {% for slot in bool_slots %}
+            <div class="slot-row bool-slot" data-slot="{{ slot }}">
+                <label>{{ slot }}</label>
+                <div class="tristate" data-slot="{{ slot }}" data-value="{{ entry.gold.slots[slot] | tojson }}" onfocus="setActiveSlot('{{ slot }}')" tabindex="0">
+                    <button type="button"
+                            class="ts-btn ts-true {% if entry.gold.slots[slot] == true %}active{% endif %}"
+                            onclick="setBoolSlot('{{ slot }}', true)"
+                            title="True (1)">T</button>
+                    <button type="button"
+                            class="ts-btn ts-false {% if entry.gold.slots[slot] == false %}active{% endif %}"
+                            onclick="setBoolSlot('{{ slot }}', false)"
+                            title="False (2)">F</button>
+                    <button type="button"
+                            class="ts-btn ts-null {% if entry.gold.slots[slot] is none %}active{% endif %}"
+                            onclick="setBoolSlot('{{ slot }}', null)"
+                            title="Null (3)">N</button>
+                </div>
+            </div>
+            {% endfor %}
+        </form>
+    </div>
+
+    <!-- Evidence Section -->
+    <div class="evidence-section">
+        <h3>Evidence</h3>
+        <div class="evidence-grid">
+            {% for slot in string_slots | list + bool_slots | list %}
+            <div class="evidence-row" data-slot="{{ slot }}">
+                <label for="evidence-{{ slot }}">{{ slot }}</label>
+                <textarea id="evidence-{{ slot }}"
+                          name="evidence_{{ slot }}"
+                          rows="2"
+                          placeholder="Evidence for {{ slot }}..."
+                          onchange="updateEvidence('{{ slot }}', this.value)">{{ entry.gold.evidence[slot] if entry.gold.evidence and entry.gold.evidence[slot] else '' }}</textarea>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- QA Hint -->
+    <div class="qa-hint-section">
+        <h3>QA Hint</h3>
+        <textarea id="qa-hint"
+                  name="qa_hint"
+                  rows="2"
+                  placeholder="Optional QA hint..."
+                  onchange="updateQaHint(this.value)">{{ entry.qa_hint if entry.qa_hint else '' }}</textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="entry-actions">
+        <button class="btn {% if entry.reviewed %}btn-success{% else %}btn-secondary{% endif %}"
+                id="reviewed-btn"
+                onclick="toggleReviewed()"
+                title="Toggle reviewed (r)">
+            {% if entry.reviewed %}Reviewed{% else %}Mark as Reviewed{% endif %}
+        </button>
+    </div>
+</div>
+
+<script>
+    // Update progress indicator
+    document.getElementById('current-index').textContent = {{ index + 1 }};
+    window.currentEntryIndex = {{ index }};
+
+    // Initialize validation
+    if (typeof initValidation === 'function') {
+        initValidation();
+    }
+</script>

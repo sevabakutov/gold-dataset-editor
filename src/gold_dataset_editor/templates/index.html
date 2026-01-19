@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>Gold Editor</h1>
+            <p class="data-root" title="{{ data_root }}">{{ data_root | truncate(30) }}</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <h3>Filters</h3>
+            <label class="filter-option">
+                <input type="checkbox" id="filter-non-null" onchange="applyFilters()">
+                <span>Non-null slots</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" id="filter-treatment" onchange="applyFilters()">
+                <span>Treatment set</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" id="filter-bool" onchange="applyFilters()">
+                <span>Bool slots set</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" id="filter-qa-hint" onchange="applyFilters()">
+                <span>Has QA hint</span>
+            </label>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search... (/)" onkeyup="handleSearchKey(event)">
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div class="file-list">
+            <h3>Files ({{ files|length }})</h3>
+            <ul id="file-tree">
+                {% for file in files %}
+                <li class="file-item" data-file-id="{{ file.relative_path | replace('/', '__') }}">
+                    <a href="#"
+                       hx-get="/partial/file/{{ file.relative_path | replace('/', '__') }}"
+                       hx-target="#main-content"
+                       hx-swap="innerHTML"
+                       onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
+                       title="{{ file.relative_path }}">
+                        <span class="file-name">{{ file.relative_path }}</span>
+                        <span class="entry-count">{{ file.entry_count }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+        <div class="welcome-message">
+            <h2>Welcome to Gold Dataset Editor</h2>
+            <p>Select a file from the sidebar to begin editing.</p>
+            <div class="stats">
+                <p><strong>{{ files|length }}</strong> files found</p>
+                <p><strong>{{ files|sum(attribute='entry_count') }}</strong> total entries</p>
+            </div>
+            <div class="shortcuts-hint">
+                <h3>Keyboard Shortcuts</h3>
+                <ul>
+                    <li><kbd>j</kbd> / <kbd>k</kbd> - Next / Previous entry</li>
+                    <li><kbd>Ctrl+S</kbd> - Save changes</li>
+                    <li><kbd>r</kbd> - Toggle reviewed</li>
+                    <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> - True / False / Null (for bool slots)</li>
+                    <li><kbd>/</kbd> - Focus search</li>
+                    <li><kbd>Esc</kbd> - Clear focus</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Toast notifications -->
+<div id="toast-container"></div>
+{% endblock %}

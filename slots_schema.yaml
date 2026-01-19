@@ -1,0 +1,42 @@
+# Slot type configuration for gold dataset editor
+# Defines the type and validation rules for each slot
+
+slots:
+  # String slots
+  number_phone:
+    type: string
+    validation:
+      pattern: '^\+?[0-9]{10,15}$'
+      warning: "Phone number should match E.164 format"
+
+  name:
+    type: string
+
+  location:
+    type: string
+
+  treatment:
+    type: string
+
+  date_time:
+    type: string
+    validation:
+      pattern: '^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$'
+      warning: "Date/time should be in ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM)"
+
+  # Boolean slots (tri-state: true, false, null)
+  is_first_time:
+    type: boolean
+    description: "Is this the client's first visit?"
+
+  has_contraindications:
+    type: boolean
+    description: "Does the client have any contraindications?"
+
+  is_consultation:
+    type: boolean
+    description: "Is this a consultation request?"
+
+  can_visit_center:
+    type: boolean
+    description: "Can the client visit the center?"

@@ -1,0 +1,32 @@
+<div class="file-content" data-file-id="{{ file_id }}" data-total-entries="{{ total_entries }}">
+    <!-- Header -->
+    <div class="content-header">
+        <h2 class="file-title">{{ file_info.relative_path }}</h2>
+        <div class="header-controls">
+            <span class="progress-indicator" id="progress">
+                <span id="current-index">1</span> / {{ total_entries }}
+            </span>
+            <button class="btn btn-secondary" onclick="jumpToEntry()" title="Jump to entry (g)">
+                Jump to...
+            </button>
+            <button class="btn btn-primary" id="save-btn" onclick="saveFile()" title="Save (Ctrl+S)">
+                Save
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="entry-navigation">
+        <button class="btn nav-btn" id="prev-btn" onclick="prevEntry()" title="Previous (k)">
+            &larr; Prev
+        </button>
+        <button class="btn nav-btn" id="next-btn" onclick="nextEntry()" title="Next (j)">
+            Next &rarr;
+        </button>
+    </div>
+
+    <!-- Entry Container -->
+    <div id="entry-container" hx-get="/partial/entry/{{ file_id }}/0" hx-trigger="load" hx-swap="innerHTML">
+        <div class="loading">Loading entry...</div>
+    </div>
+</div>
