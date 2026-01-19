@@ -149,6 +149,7 @@ SLOT_OPTIONS: dict[str, list[str]] = {
         "focus_rejuvenation",
         "heel_treatment",
         "pms",
+        "endosphere",
         "other",
     ],
     "hair_removal_areas": [
