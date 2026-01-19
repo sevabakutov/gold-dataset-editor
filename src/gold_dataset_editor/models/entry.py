@@ -79,7 +79,9 @@ class EntryUpdate(BaseModel):
 
 # Intention types
 INTENTION_TYPES = [
+    "greet",
     "ask_question",
+    "ask_work_schedule",
     "book_appointment",
     "reschedule_appointment",
     "cancel_appointment",
@@ -205,7 +207,7 @@ SLOT_OPTIONS: dict[str, list[str]] = {
     "tattoo_removal_category": ["first", "second", "third", "fourth", "eyeild", "test_area"],
     "tattoo_equipment": ["qswitch", "picoseconds_lazer"],
     "blood_vessels_area": ["peri_orbital", "face", "legs", "arms"],
-    "specialist": ["other"],
+    "specialist": ["podiatrist", "other"],
     "city": [
         "Київ",
         "Харків",
