@@ -54,13 +54,27 @@ async def index(request: Request):
     """Render the main page."""
     from gold_dataset_editor.storage.indexer import index_directory
 
-    file_list = index_directory(settings.data_root)
+    # Get files from output folder (data_root)
+    output_files = index_directory(settings.data_root)
+
+    # Get files from reviewed folder
+    reviewed_root = settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+    reviewed_files = []
+    if reviewed_root.exists():
+        reviewed_files = index_directory(reviewed_root)
+
+    # Get set of reviewed file names (relative paths)
+    reviewed_names = {f.relative_path for f in reviewed_files}
+
+    # Filter output files - exclude those already in reviewed
+    pending_files = [f for f in output_files if f.relative_path not in reviewed_names]
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "files": file_list,
+            "reviewed_files": reviewed_files,
+            "pending_files": pending_files,
             "data_root": str(settings.data_root),
         },
     )
@@ -72,7 +86,10 @@ async def partial_file(request: Request, file_id: str):
     from gold_dataset_editor.storage.indexer import get_file_by_id
     from gold_dataset_editor.storage.reader import read_jsonl
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    # Determine reviewed_root
+    reviewed_root = settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         return templates.TemplateResponse(
             "partials/error.html",
@@ -101,7 +118,10 @@ async def partial_entry(request: Request, file_id: str, index: int):
     from gold_dataset_editor.storage.reader import read_jsonl
     from gold_dataset_editor.models.entry import BOOL_SLOTS, STRING_SLOTS, INTENTION_TYPES, MULTI_SELECT_SLOTS, SLOT_OPTIONS
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    # Determine reviewed_root
+    reviewed_root = settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         return templates.TemplateResponse(
             "partials/error.html",
@@ -123,6 +143,12 @@ async def partial_entry(request: Request, file_id: str, index: int):
     unsaved = edit_session.get_unsaved_entry(file_info.path, index)
     if unsaved:
         entry = unsaved
+
+    # Ensure entry has the proper structure for the template
+    if "gold" not in entry:
+        entry["gold"] = {}
+    if "slots" not in entry["gold"]:
+        entry["gold"]["slots"] = {}
 
     return templates.TemplateResponse(
         "partials/entry_card.html",

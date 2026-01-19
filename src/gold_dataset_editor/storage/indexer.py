@@ -60,12 +60,15 @@ def index_directory(root: Path) -> list[FileInfo]:
     return files
 
 
-def get_file_by_id(root: Path, file_id: str) -> FileInfo | None:
+def get_file_by_id(root: Path, file_id: str, reviewed_root: Path | None = None) -> FileInfo | None:
     """Get FileInfo for a specific file by its ID (relative path).
 
+    Checks reviewed folder first if provided, then falls back to data_root.
+
     Args:
-        root: Root directory
+        root: Root directory (data_root)
         file_id: Relative path of the file (URL-encoded slashes replaced with __)
+        reviewed_root: Optional reviewed folder to check first
 
     Returns:
         FileInfo if found, None otherwise
@@ -74,6 +77,32 @@ def get_file_by_id(root: Path, file_id: str) -> FileInfo | None:
 
     # Decode file_id (replace __ back to /)
     relative_path = file_id.replace("__", "/")
+
+    # Check reviewed folder first if provided
+    if reviewed_root:
+        reviewed_root = Path(reviewed_root).resolve()
+        reviewed_path = reviewed_root / relative_path
+
+        if reviewed_path.exists() and reviewed_path.is_file():
+            if not str(reviewed_path.resolve()).startswith(str(reviewed_root)):
+                # Security: prevent path traversal
+                return None
+
+            stat = reviewed_path.stat()
+            try:
+                entry_count = count_entries(reviewed_path)
+            except Exception:
+                entry_count = 0
+
+            return FileInfo(
+                path=reviewed_path,
+                relative_path=relative_path,
+                entry_count=entry_count,
+                last_modified=datetime.fromtimestamp(stat.st_mtime),
+                size_bytes=stat.st_size,
+            )
+
+    # Fall back to data_root
     path = root / relative_path
 
     if not path.exists() or not path.is_file():

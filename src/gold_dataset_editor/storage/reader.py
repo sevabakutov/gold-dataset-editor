@@ -5,6 +5,44 @@ from pathlib import Path
 from typing import Iterator
 
 
+def get_source_path(
+    original_path: Path,
+    data_root: Path,
+    reviewed_output_dir: Path | None = None,
+) -> Path:
+    """Get the path to read from, preferring reviewed version if it exists.
+
+    Args:
+        original_path: Path to the original JSONL file in data_root
+        data_root: Root directory for JSONL files (output folder)
+        reviewed_output_dir: Custom reviewed directory, or None for default
+
+    Returns:
+        Path to the reviewed file if it exists, otherwise the original path
+    """
+    original_path = Path(original_path).resolve()
+    data_root = Path(data_root).resolve()
+
+    # Compute reviewed path
+    try:
+        relative_path = original_path.relative_to(data_root)
+    except ValueError:
+        # original_path is not under data_root, use just the filename
+        relative_path = Path(original_path.name)
+
+    if reviewed_output_dir is not None:
+        reviewed_root = Path(reviewed_output_dir).resolve()
+    else:
+        reviewed_root = data_root.parent / "reviewed"
+
+    reviewed_path = reviewed_root / relative_path
+
+    # Return reviewed path if it exists, otherwise original
+    if reviewed_path.exists() and reviewed_path.is_file():
+        return reviewed_path
+    return original_path
+
+
 def read_jsonl(path: Path) -> list[dict]:
     """Read all entries from a JSONL file.
 

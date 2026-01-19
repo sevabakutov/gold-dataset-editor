@@ -90,6 +90,8 @@ def test_client(temp_dir, sample_jsonl_file):
 
     # Update settings
     settings.data_root = temp_dir
+    # Set reviewed_output_dir inside temp_dir to avoid test pollution
+    settings.reviewed_output_dir = temp_dir / "reviewed"
 
     # Clear edit session before each test
     edit_session.clear()

@@ -9,7 +9,12 @@ from gold_dataset_editor.config import settings
 from gold_dataset_editor.models.entry import EntryUpdate, BOOL_SLOTS
 from gold_dataset_editor.storage.indexer import get_file_by_id
 from gold_dataset_editor.storage.reader import read_jsonl
-from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup, write_reviewed_file
+from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup, write_reviewed_file, write_working_copy
+
+
+def _get_reviewed_root():
+    """Get the reviewed root directory."""
+    return settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
 
 router = APIRouter()
 
@@ -52,7 +57,8 @@ async def list_entries(
     search: str = Query(default=""),
 ) -> EntriesListResponse:
     """List entries for a file with optional filtering and pagination."""
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -213,7 +219,8 @@ async def get_entry(file_id: str, index: int) -> EntryResponse:
     """Get a single entry by index."""
     from gold_dataset_editor.app import edit_session
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -238,7 +245,8 @@ async def patch_entry(file_id: str, index: int, update: EntryUpdate) -> EntryRes
     """Update an entry's fields (stores in session, not saved to disk yet)."""
     from gold_dataset_editor.app import edit_session
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -427,7 +435,8 @@ async def mark_reviewed(file_id: str, index: int) -> EntryResponse:
 
     logger = logging.getLogger(__name__)
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -453,30 +462,28 @@ async def mark_reviewed(file_id: str, index: int) -> EntryResponse:
         entry,
     )
 
-    # Auto-save to reviewed directory when marking as reviewed (not un-marking)
-    if entry["reviewed"]:
-        try:
-            # Merge session changes with disk entries
-            merged_entries = _merge_session_entries(file_info.path, entries, edit_session)
-            # Update current entry in merged list
-            merged_entries[index] = entry
+    # Merge session changes and update current entry
+    merged_entries = _merge_session_entries(file_info.path, entries, edit_session)
+    merged_entries[index] = entry
 
-            # Write cleaned file to reviewed directory
-            reviewed_path = write_reviewed_file(
-                file_info.path,
-                merged_entries,
-                settings.data_root,
-                settings.reviewed_output_dir,
-            )
-            logger.info(f"Auto-saved reviewed file to: {reviewed_path}")
-        except Exception as e:
-            # Don't fail the request if reviewed file write fails
-            logger.error(f"Failed to write reviewed file: {e}")
+    # Always save full entries (not cleaned) to reviewed folder for persistence
+    try:
+        reviewed_path = write_working_copy(
+            file_info.path,
+            merged_entries,
+            settings.data_root,
+            settings.reviewed_output_dir,
+        )
+        edit_session.mark_saved(file_info.path)
+        logger.info(f"Saved working copy to: {reviewed_path}")
+    except Exception as e:
+        logger.error(f"Failed to write working copy: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save: {e}")
 
     return EntryResponse(
         index=index,
         entry=entry,
-        has_unsaved=True,
+        has_unsaved=False,
     )
 
 
@@ -485,7 +492,8 @@ async def save_file(file_id: str) -> SaveResponse:
     """Save all unsaved changes for a file to disk."""
     from gold_dataset_editor.app import edit_session
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -504,13 +512,13 @@ async def save_file(file_id: str) -> SaveResponse:
         if path_str == file_str and 0 <= idx < len(entries):
             entries[idx] = modified_entry
 
-    # Create backup if enabled
-    backup_path = None
-    if settings.backup_on_save:
-        backup_path = create_backup(file_info.path)
-
-    # Write atomically
-    write_jsonl_atomic(file_info.path, entries)
+    # Save full entries to reviewed folder for persistence
+    reviewed_path = write_working_copy(
+        file_info.path,
+        entries,
+        settings.data_root,
+        settings.reviewed_output_dir,
+    )
 
     # Mark as saved in session
     edit_session.mark_saved(file_info.path)
@@ -518,7 +526,7 @@ async def save_file(file_id: str) -> SaveResponse:
     return SaveResponse(
         success=True,
         message=f"Saved {file_info.relative_path}",
-        backup_path=str(backup_path) if backup_path else None,
+        backup_path=str(reviewed_path),
     )
 
 
@@ -528,7 +536,8 @@ async def search_entries(
     q: str = Query(..., min_length=1),
 ) -> EntriesListResponse:
     """Search entries in a file."""
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 

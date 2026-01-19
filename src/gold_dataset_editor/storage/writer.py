@@ -162,18 +162,22 @@ def compute_reviewed_path(
     source_path = Path(source_path).resolve()
     data_root = Path(data_root).resolve()
 
-    # Get relative path from data_root
-    try:
-        relative_path = source_path.relative_to(data_root)
-    except ValueError:
-        # source_path is not under data_root, use just the filename
-        relative_path = Path(source_path.name)
-
-    # Determine output root
+    # Determine output root first
     if reviewed_root is not None:
         output_root = Path(reviewed_root).resolve()
     else:
         output_root = data_root.parent / "reviewed"
+
+    # Get relative path - check data_root first, then reviewed_root
+    try:
+        relative_path = source_path.relative_to(data_root)
+    except ValueError:
+        # source_path is not under data_root, check if it's under reviewed_root
+        try:
+            relative_path = source_path.relative_to(output_root)
+        except ValueError:
+            # Not under either root, use just the filename
+            relative_path = Path(source_path.name)
 
     return output_root / relative_path
 
@@ -202,5 +206,30 @@ def write_reviewed_file(
 
     # Write atomically
     write_jsonl_atomic(output_path, cleaned_entries)
+
+    return output_path
+
+
+def write_working_copy(
+    source_path: Path,
+    entries: list[dict],
+    data_root: Path,
+    reviewed_root: Path | None = None,
+) -> Path:
+    """Write full entries (not cleaned) to the reviewed directory for persistence.
+
+    Args:
+        source_path: Path to the original JSONL file
+        entries: List of entries to write (without cleaning)
+        data_root: Root directory for JSONL files
+        reviewed_root: Optional custom output directory
+
+    Returns:
+        Path to the written file
+    """
+    output_path = compute_reviewed_path(source_path, data_root, reviewed_root)
+
+    # Write atomically WITHOUT cleaning - preserves all fields
+    write_jsonl_atomic(output_path, entries)
 
     return output_path

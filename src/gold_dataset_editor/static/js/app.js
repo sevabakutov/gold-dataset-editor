@@ -569,7 +569,6 @@ async function toggleReviewed() {
 
         if (response.ok) {
             const data = await response.json();
-            markAsUnsaved();
 
             // Update button
             const btn = document.getElementById('reviewed-btn');
@@ -585,8 +584,20 @@ async function toggleReviewed() {
                 }
             }
 
-            // Update sidebar item color
+            // Check if file is in Pending section - if so, it needs to move to Reviewed section
             const fileItem = document.querySelector(`.file-item[data-file-id="${window.currentFileId}"]`);
+            const isInPendingSection = fileItem && fileItem.closest('.file-section')?.querySelector('.section-header.pending');
+
+            if (isInPendingSection && data.entry.reviewed) {
+                // File was in Pending and is now reviewed - reload page to update sidebar
+                showToast('Entry marked as reviewed. Updating sidebar...', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+                return;
+            }
+
+            // Update sidebar item color for files that stay in same section
             if (fileItem) {
                 if (data.entry.reviewed) {
                     fileItem.classList.add('reviewed');

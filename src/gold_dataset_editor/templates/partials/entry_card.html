@@ -140,19 +140,20 @@
 
             <!-- Boolean Slots (Tri-state) -->
             {% for slot in bool_slots %}
+            {% set slot_val = entry.gold.slots.get(slot) %}
             <div class="slot-row bool-slot" data-slot="{{ slot }}">
                 <label>{{ slot }}</label>
-                <div class="tristate" data-slot="{{ slot }}" data-value="{{ entry.gold.slots[slot] | tojson }}" onfocus="setActiveSlot('{{ slot }}')" tabindex="0">
+                <div class="tristate" data-slot="{{ slot }}" data-value="{{ slot_val | tojson }}" onfocus="setActiveSlot('{{ slot }}')" tabindex="0">
                     <button type="button"
-                            class="ts-btn ts-true {% if entry.gold.slots[slot] == true %}active{% endif %}"
+                            class="ts-btn ts-true {% if slot_val == true %}active{% endif %}"
                             onclick="setBoolSlot('{{ slot }}', true)"
                             title="True (1)">T</button>
                     <button type="button"
-                            class="ts-btn ts-false {% if entry.gold.slots[slot] == false %}active{% endif %}"
+                            class="ts-btn ts-false {% if slot_val == false %}active{% endif %}"
                             onclick="setBoolSlot('{{ slot }}', false)"
                             title="False (2)">F</button>
                     <button type="button"
-                            class="ts-btn ts-null {% if entry.gold.slots[slot] is none %}active{% endif %}"
+                            class="ts-btn ts-null {% if slot_val is none %}active{% endif %}"
                             onclick="setBoolSlot('{{ slot }}', null)"
                             title="Null (3)">N</button>
                 </div>

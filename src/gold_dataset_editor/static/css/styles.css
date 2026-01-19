@@ -83,6 +83,30 @@ body {
     color: var(--text-secondary);
 }
 
+/* File Section Headers */
+.file-section {
+    margin-bottom: 1rem;
+}
+
+.section-header {
+    font-size: 0.85rem;
+    padding: 0.5rem 0;
+    margin: 0 0 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-header.reviewed {
+    color: var(--success);
+}
+
+.section-header.pending {
+    color: var(--text-secondary);
+}
+
+.file-tree {
+    list-style: none;
+}
+
 #file-tree {
     list-style: none;
 }

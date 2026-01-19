@@ -9,6 +9,11 @@ from gold_dataset_editor.storage.indexer import index_directory, get_file_by_id
 router = APIRouter()
 
 
+def _get_reviewed_root():
+    """Get the reviewed root directory."""
+    return settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+
+
 class FileStats(BaseModel):
     """Statistics for a single file."""
 
@@ -53,7 +58,8 @@ async def get_file_stats(file_id: str) -> FileStats:
     """Get statistics for a specific file."""
     from gold_dataset_editor.storage.reader import read_jsonl
 
-    file_info = get_file_by_id(settings.data_root, file_id)
+    reviewed_root = _get_reviewed_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 

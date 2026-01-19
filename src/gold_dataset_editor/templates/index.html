@@ -11,22 +11,49 @@
 
         <!-- File List -->
         <div class="file-list">
-            <h3>Files ({{ files|length }})</h3>
-            <ul id="file-tree">
-                {% for file in files %}
-                <li class="file-item" data-file-id="{{ file.relative_path | replace('/', '__') }}">
-                    <a href="#"
-                       hx-get="/partial/file/{{ file.relative_path | replace('/', '__') }}"
-                       hx-target="#main-content"
-                       hx-swap="innerHTML"
-                       onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
-                       title="{{ file.relative_path }}">
-                        <span class="file-name">{{ file.relative_path }}</span>
-                        <span class="entry-count">{{ file.entry_count }}</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
+            <!-- Reviewed Section -->
+            {% if reviewed_files %}
+            <div class="file-section">
+                <h3 class="section-header reviewed">Reviewed ({{ reviewed_files|length }})</h3>
+                <ul class="file-tree">
+                    {% for file in reviewed_files %}
+                    <li class="file-item reviewed" data-file-id="{{ file.relative_path | replace('/', '__') }}">
+                        <a href="#"
+                           hx-get="/partial/file/{{ file.relative_path | replace('/', '__') }}"
+                           hx-target="#main-content"
+                           hx-swap="innerHTML"
+                           onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
+                           title="{{ file.relative_path }}">
+                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="entry-count">{{ file.entry_count }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Pending Section -->
+            {% if pending_files %}
+            <div class="file-section">
+                <h3 class="section-header pending">Pending ({{ pending_files|length }})</h3>
+                <ul class="file-tree">
+                    {% for file in pending_files %}
+                    <li class="file-item" data-file-id="{{ file.relative_path | replace('/', '__') }}">
+                        <a href="#"
+                           hx-get="/partial/file/{{ file.relative_path | replace('/', '__') }}"
+                           hx-target="#main-content"
+                           hx-swap="innerHTML"
+                           onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
+                           title="{{ file.relative_path }}">
+                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="entry-count">{{ file.entry_count }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </aside>
 
@@ -36,8 +63,9 @@
             <h2>Welcome to Gold Dataset Editor</h2>
             <p>Select a file from the sidebar to begin editing.</p>
             <div class="stats">
-                <p><strong>{{ files|length }}</strong> files found</p>
-                <p><strong>{{ files|sum(attribute='entry_count') }}</strong> total entries</p>
+                <p><strong>{{ reviewed_files|length }}</strong> reviewed files</p>
+                <p><strong>{{ pending_files|length }}</strong> pending files</p>
+                <p><strong>{{ (reviewed_files + pending_files)|sum(attribute='entry_count') }}</strong> total entries</p>
             </div>
             <div class="shortcuts-hint">
                 <h3>Keyboard Shortcuts</h3>
