@@ -9,7 +9,7 @@ from gold_dataset_editor.config import settings
 from gold_dataset_editor.models.entry import EntryUpdate, BOOL_SLOTS
 from gold_dataset_editor.storage.indexer import get_file_by_id
 from gold_dataset_editor.storage.reader import read_jsonl
-from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup
+from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup, write_reviewed_file
 
 router = APIRouter()
 
@@ -291,6 +291,21 @@ async def patch_entry(file_id: str, index: int, update: EntryUpdate) -> EntryRes
                 entry,
             )
 
+    if update.intentions is not None:
+        if "gold" not in entry:
+            entry["gold"] = {}
+        old_value = entry["gold"].get("intentions")
+        entry["gold"]["intentions"] = update.intentions
+        edit_session.record_change(
+            file_info.path,
+            index,
+            entry.get("id", ""),
+            "gold.intentions",
+            old_value,
+            update.intentions,
+            entry,
+        )
+
     if update.qa_hint is not None:
         old_value = entry.get("qa_hint")
         entry["qa_hint"] = update.qa_hint
@@ -382,10 +397,35 @@ async def patch_entry(file_id: str, index: int, update: EntryUpdate) -> EntryRes
     )
 
 
+def _merge_session_entries(file_path, disk_entries: list[dict], edit_session) -> list[dict]:
+    """Merge session changes with disk entries.
+
+    Args:
+        file_path: Path to the file
+        disk_entries: List of entries from disk
+        edit_session: The edit session containing unsaved changes
+
+    Returns:
+        List of entries with session changes applied
+    """
+    merged = []
+    file_str = str(file_path)
+    for idx, disk_entry in enumerate(disk_entries):
+        session_entry = edit_session.get_unsaved_entry(file_path, idx)
+        if session_entry is not None:
+            merged.append(session_entry)
+        else:
+            merged.append(disk_entry.copy())
+    return merged
+
+
 @router.post("/{file_id:path}/entries/{index}/reviewed")
 async def mark_reviewed(file_id: str, index: int) -> EntryResponse:
     """Toggle the reviewed status of an entry."""
     from gold_dataset_editor.app import edit_session
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     file_info = get_file_by_id(settings.data_root, file_id)
     if not file_info:
@@ -412,6 +452,26 @@ async def mark_reviewed(file_id: str, index: int) -> EntryResponse:
         entry["reviewed"],
         entry,
     )
+
+    # Auto-save to reviewed directory when marking as reviewed (not un-marking)
+    if entry["reviewed"]:
+        try:
+            # Merge session changes with disk entries
+            merged_entries = _merge_session_entries(file_info.path, entries, edit_session)
+            # Update current entry in merged list
+            merged_entries[index] = entry
+
+            # Write cleaned file to reviewed directory
+            reviewed_path = write_reviewed_file(
+                file_info.path,
+                merged_entries,
+                settings.data_root,
+                settings.reviewed_output_dir,
+            )
+            logger.info(f"Auto-saved reviewed file to: {reviewed_path}")
+        except Exception as e:
+            # Don't fail the request if reviewed file write fails
+            logger.error(f"Failed to write reviewed file: {e}")
 
     return EntryResponse(
         index=index,

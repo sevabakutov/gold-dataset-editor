@@ -122,6 +122,218 @@ function clearSlot(slotName) {
         input.value = '';
         updateSlot(slotName, null);
     }
+    // Also handle multi-select slots
+    const tagsContainer = document.getElementById(`tags-${slotName}`);
+    if (tagsContainer) {
+        tagsContainer.innerHTML = '<span class="placeholder">null</span>';
+        updateSlot(slotName, null);
+        // Uncheck all options in dropdown
+        const dropdown = document.getElementById(`dropdown-${slotName}`);
+        if (dropdown) {
+            dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+    }
+}
+
+/**
+ * Toggle multi-select dropdown visibility
+ */
+function toggleMultiSelectDropdown(slotName) {
+    const dropdown = document.getElementById(`dropdown-${slotName}`);
+    if (!dropdown) return;
+
+    // Close all other dropdowns first
+    document.querySelectorAll('.multi-select-dropdown.open').forEach(d => {
+        if (d.id !== `dropdown-${slotName}`) {
+            d.classList.remove('open');
+        }
+    });
+
+    dropdown.classList.toggle('open');
+
+    // Focus the search input when opening
+    if (dropdown.classList.contains('open')) {
+        const searchInput = dropdown.querySelector('.dropdown-search-input');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.value = '';
+            filterDropdownOptions(slotName, '');
+        }
+    }
+}
+
+/**
+ * Close dropdown when clicking outside
+ */
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.multi-select-container')) {
+        document.querySelectorAll('.multi-select-dropdown.open').forEach(d => {
+            d.classList.remove('open');
+        });
+    }
+});
+
+/**
+ * Get current slot values as array
+ */
+function getSlotValues(slotName) {
+    const tagsContainer = document.getElementById(`tags-${slotName}`);
+    if (!tagsContainer) return [];
+
+    const tags = tagsContainer.querySelectorAll('.selected-tag');
+    return Array.from(tags).map(tag => tag.dataset.value);
+}
+
+/**
+ * Toggle a slot option (checkbox in dropdown)
+ */
+async function toggleSlotOption(slotName, value, checked) {
+    if (!window.currentFileId) return;
+
+    let currentValues = getSlotValues(slotName);
+
+    if (checked) {
+        if (!currentValues.includes(value)) {
+            currentValues.push(value);
+        }
+    } else {
+        currentValues = currentValues.filter(v => v !== value);
+    }
+
+    // Update UI
+    updateSlotTagsUI(slotName, currentValues);
+
+    // Send to server - use array for multi-values, single value or null otherwise
+    const valueToSend = currentValues.length === 0 ? null :
+                        currentValues.length === 1 ? currentValues[0] : currentValues;
+    await updateSlot(slotName, valueToSend);
+}
+
+/**
+ * Add a new value to a multi-select slot (from search input)
+ */
+async function addSlotValue(slotName, value) {
+    if (!window.currentFileId || !value.trim()) return;
+
+    let currentValues = getSlotValues(slotName);
+    const trimmedValue = value.trim();
+
+    if (!currentValues.includes(trimmedValue)) {
+        currentValues.push(trimmedValue);
+
+        // Update UI
+        updateSlotTagsUI(slotName, currentValues);
+
+        // Send to server
+        const valueToSend = currentValues.length === 1 ? currentValues[0] : currentValues;
+        await updateSlot(slotName, valueToSend);
+    }
+
+    // Clear the search input
+    const dropdown = document.getElementById(`dropdown-${slotName}`);
+    if (dropdown) {
+        const searchInput = dropdown.querySelector('.dropdown-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            filterDropdownOptions(slotName, '');
+        }
+    }
+}
+
+/**
+ * Remove a value from a multi-select slot
+ */
+async function removeSlotValue(slotName, value) {
+    if (!window.currentFileId) return;
+
+    let currentValues = getSlotValues(slotName);
+    currentValues = currentValues.filter(v => v !== value);
+
+    // Update UI
+    updateSlotTagsUI(slotName, currentValues);
+
+    // Update checkbox in dropdown
+    const dropdown = document.getElementById(`dropdown-${slotName}`);
+    if (dropdown) {
+        const checkbox = dropdown.querySelector(`input[value="${CSS.escape(value)}"]`);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    }
+
+    // Send to server
+    const valueToSend = currentValues.length === 0 ? null :
+                        currentValues.length === 1 ? currentValues[0] : currentValues;
+    await updateSlot(slotName, valueToSend);
+}
+
+/**
+ * Update the tags UI for a multi-select slot
+ */
+function updateSlotTagsUI(slotName, values) {
+    const tagsContainer = document.getElementById(`tags-${slotName}`);
+    if (!tagsContainer) return;
+
+    if (values.length === 0) {
+        tagsContainer.innerHTML = '<span class="placeholder">null</span>';
+    } else {
+        tagsContainer.innerHTML = values.map(val =>
+            `<span class="selected-tag" data-value="${escapeHtml(val)}">
+                ${escapeHtml(val)}
+                <button type="button" class="tag-remove" onclick="event.stopPropagation(); removeSlotValue('${slotName}', '${escapeJs(val)}')">&times;</button>
+            </span>`
+        ).join('');
+    }
+}
+
+/**
+ * Handle keydown in dropdown search input
+ */
+function handleDropdownKeydown(event, slotName) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const value = event.target.value.trim();
+        if (value) {
+            addSlotValue(slotName, value);
+        }
+    } else if (event.key === 'Escape') {
+        const dropdown = document.getElementById(`dropdown-${slotName}`);
+        if (dropdown) {
+            dropdown.classList.remove('open');
+        }
+    }
+}
+
+/**
+ * Filter dropdown options based on search input
+ */
+function filterDropdownOptions(slotName, searchText) {
+    const optionsContainer = document.getElementById(`options-${slotName}`);
+    if (!optionsContainer) return;
+
+    const options = optionsContainer.querySelectorAll('.dropdown-option');
+    const lowerSearch = searchText.toLowerCase();
+
+    options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(lowerSearch) ? '' : 'none';
+    });
+}
+
+/**
+ * Escape HTML entities
+ */
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Escape string for JavaScript
+ */
+function escapeJs(str) {
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
 
 /**
@@ -296,6 +508,51 @@ async function updateQaHint(value) {
     } catch (error) {
         console.error('Error updating QA hint:', error);
         showToast('Error updating QA hint', 'error');
+    }
+}
+
+/**
+ * Toggle an intention checkbox
+ */
+async function toggleIntention(intentionType, checked) {
+    if (!window.currentFileId) return;
+
+    // Get all currently checked intentions
+    const checkboxes = document.querySelectorAll('.intentions-grid input[type="checkbox"]');
+    const intentions = [];
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            intentions.push(cb.value);
+        }
+    });
+
+    try {
+        const response = await fetch(`/api/files/${window.currentFileId}/entries/${window.currentEntryIndex}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ intentions: intentions })
+        });
+
+        if (response.ok) {
+            markAsUnsaved();
+        } else {
+            showToast('Failed to update intentions', 'error');
+            // Revert checkbox state on error
+            const checkbox = document.querySelector(`input[value="${intentionType}"]`);
+            if (checkbox) {
+                checkbox.checked = !checked;
+            }
+        }
+    } catch (error) {
+        console.error('Error updating intentions:', error);
+        showToast('Error updating intentions', 'error');
+        // Revert checkbox state on error
+        const checkbox = document.querySelector(`input[value="${intentionType}"]`);
+        if (checkbox) {
+            checkbox.checked = !checked;
+        }
     }
 }
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from gold_dataset_editor.storage.reader import read_jsonl
+from gold_dataset_editor.storage.cleaner import clean_entries
 
 
 def write_jsonl_atomic(path: Path, entries: list[dict]) -> None:
@@ -141,3 +142,65 @@ def _compute_changes(old: dict, new: dict) -> dict[str, Any]:
 
     compare("", old, new)
     return changes
+
+
+def compute_reviewed_path(
+    source_path: Path,
+    data_root: Path,
+    reviewed_root: Path | None = None,
+) -> Path:
+    """Compute the output path for a reviewed file.
+
+    Args:
+        source_path: Path to the original JSONL file
+        data_root: Root directory for JSONL files
+        reviewed_root: Optional custom output directory. If None, uses {data_root}/../reviewed/
+
+    Returns:
+        Path where the reviewed file should be written
+    """
+    source_path = Path(source_path).resolve()
+    data_root = Path(data_root).resolve()
+
+    # Get relative path from data_root
+    try:
+        relative_path = source_path.relative_to(data_root)
+    except ValueError:
+        # source_path is not under data_root, use just the filename
+        relative_path = Path(source_path.name)
+
+    # Determine output root
+    if reviewed_root is not None:
+        output_root = Path(reviewed_root).resolve()
+    else:
+        output_root = data_root.parent / "reviewed"
+
+    return output_root / relative_path
+
+
+def write_reviewed_file(
+    source_path: Path,
+    entries: list[dict],
+    data_root: Path,
+    reviewed_root: Path | None = None,
+) -> Path:
+    """Clean entries and write to the reviewed directory.
+
+    Args:
+        source_path: Path to the original JSONL file
+        entries: List of entries to clean and write
+        data_root: Root directory for JSONL files
+        reviewed_root: Optional custom output directory
+
+    Returns:
+        Path to the written reviewed file
+    """
+    output_path = compute_reviewed_path(source_path, data_root, reviewed_root)
+
+    # Clean entries (removes evidence, qa_hint, and nulls)
+    cleaned_entries = clean_entries(entries)
+
+    # Write atomically
+    write_jsonl_atomic(output_path, cleaned_entries)
+
+    return output_path

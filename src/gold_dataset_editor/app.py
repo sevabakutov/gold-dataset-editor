@@ -99,7 +99,7 @@ async def partial_entry(request: Request, file_id: str, index: int):
     """Render single entry partial (for HTMX)."""
     from gold_dataset_editor.storage.indexer import get_file_by_id
     from gold_dataset_editor.storage.reader import read_jsonl
-    from gold_dataset_editor.models.entry import BOOL_SLOTS, STRING_SLOTS
+    from gold_dataset_editor.models.entry import BOOL_SLOTS, STRING_SLOTS, INTENTION_TYPES, MULTI_SELECT_SLOTS, SLOT_OPTIONS
 
     file_info = get_file_by_id(settings.data_root, file_id)
     if not file_info:
@@ -134,6 +134,9 @@ async def partial_entry(request: Request, file_id: str, index: int):
             "total_entries": len(entries),
             "bool_slots": BOOL_SLOTS,
             "string_slots": STRING_SLOTS,
+            "intention_types": INTENTION_TYPES,
+            "multi_select_slots": MULTI_SELECT_SLOTS,
+            "slot_options": SLOT_OPTIONS,
             "has_unsaved": unsaved is not None,
         },
     )

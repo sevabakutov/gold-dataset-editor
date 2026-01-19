@@ -38,12 +38,86 @@
     </div>
     {% endif %}
 
+    <!-- Intentions (moved before Slots) -->
+    <div class="intentions-section">
+        <h3>Intentions</h3>
+        <div class="intentions-grid">
+            {% for intention in intention_types %}
+            <label class="intention-checkbox">
+                <input type="checkbox"
+                       name="intention-{{ intention }}"
+                       value="{{ intention }}"
+                       {% if entry.gold.intentions and intention in entry.gold.intentions %}checked{% endif %}
+                       onchange="toggleIntention('{{ intention }}', this.checked)">
+                <span class="intention-label">{{ intention }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- Slots Form -->
     <div class="slots-section">
         <h3>Slots</h3>
         <form id="slots-form" class="slots-form">
-            <!-- String Slots -->
+            <!-- Multi-Select Slots -->
             {% for slot in string_slots %}
+            {% if slot in multi_select_slots %}
+            <div class="slot-row multi-select-slot" data-slot="{{ slot }}">
+                <label for="slot-{{ slot }}">{{ slot }}</label>
+                <div class="multi-select-container">
+                    <div class="multi-select-display" onclick="toggleMultiSelectDropdown('{{ slot }}')">
+                        <div class="selected-tags" id="tags-{{ slot }}">
+                            {% set slot_val = entry.gold.slots[slot] %}
+                            {% if slot_val is none %}
+                            <span class="placeholder">null</span>
+                            {% elif slot_val is string %}
+                            <span class="selected-tag" data-value="{{ slot_val }}">
+                                {{ slot_val }}
+                                <button type="button" class="tag-remove" onclick="event.stopPropagation(); removeSlotValue('{{ slot }}', '{{ slot_val }}')">&times;</button>
+                            </span>
+                            {% elif slot_val is iterable %}
+                            {% for val in slot_val %}
+                            <span class="selected-tag" data-value="{{ val }}">
+                                {{ val }}
+                                <button type="button" class="tag-remove" onclick="event.stopPropagation(); removeSlotValue('{{ slot }}', '{{ val }}')">&times;</button>
+                            </span>
+                            {% endfor %}
+                            {% if not slot_val %}
+                            <span class="placeholder">null</span>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        <button type="button" class="dropdown-toggle" title="Toggle dropdown">&#9662;</button>
+                    </div>
+                    <div class="multi-select-dropdown" id="dropdown-{{ slot }}">
+                        <div class="dropdown-search">
+                            <input type="text"
+                                   class="dropdown-search-input"
+                                   placeholder="Type to add or search..."
+                                   onkeydown="handleDropdownKeydown(event, '{{ slot }}')"
+                                   oninput="filterDropdownOptions('{{ slot }}', this.value)">
+                        </div>
+                        <div class="dropdown-options" id="options-{{ slot }}">
+                            {% for option in slot_options[slot] %}
+                            {% set slot_val = entry.gold.slots[slot] %}
+                            {% set is_selected = (slot_val == option) or (slot_val is iterable and slot_val is not string and option in slot_val) %}
+                            <label class="dropdown-option">
+                                <input type="checkbox"
+                                       value="{{ option }}"
+                                       {% if is_selected %}checked{% endif %}
+                                       onchange="toggleSlotOption('{{ slot }}', '{{ option }}', this.checked)">
+                                <span>{{ option }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="clear-btn" onclick="clearSlot('{{ slot }}')" title="Set to null">
+                    &times;
+                </button>
+            </div>
+            {% else %}
+            <!-- Regular Text Input Slots (number_phone, name, date_time, specialist_name) -->
             <div class="slot-row string-slot" data-slot="{{ slot }}">
                 <label for="slot-{{ slot }}">{{ slot }}</label>
                 <div class="slot-input-group">
@@ -61,6 +135,7 @@
                 </div>
                 <div class="validation-warning" id="warning-{{ slot }}"></div>
             </div>
+            {% endif %}
             {% endfor %}
 
             <!-- Boolean Slots (Tri-state) -->
