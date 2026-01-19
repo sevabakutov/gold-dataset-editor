@@ -9,30 +9,6 @@
             <p class="data-root" title="{{ data_root }}">{{ data_root | truncate(30) }}</p>
         </div>
 
-        <!-- Filters -->
-        <div class="filters">
-            <h3>Filters</h3>
-            <label class="filter-option">
-                <input type="checkbox" id="filter-non-null" onchange="applyFilters()">
-                <span>Non-null slots</span>
-            </label>
-            <label class="filter-option">
-                <input type="checkbox" id="filter-treatment" onchange="applyFilters()">
-                <span>Treatment set</span>
-            </label>
-            <label class="filter-option">
-                <input type="checkbox" id="filter-bool" onchange="applyFilters()">
-                <span>Bool slots set</span>
-            </label>
-            <label class="filter-option">
-                <input type="checkbox" id="filter-qa-hint" onchange="applyFilters()">
-                <span>Has QA hint</span>
-            </label>
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search... (/)" onkeyup="handleSearchKey(event)">
-            </div>
-        </div>
-
         <!-- File List -->
         <div class="file-list">
             <h3>Files ({{ files|length }})</h3>

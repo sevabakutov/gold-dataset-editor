@@ -86,33 +86,6 @@
         </form>
     </div>
 
-    <!-- Evidence Section -->
-    <div class="evidence-section">
-        <h3>Evidence</h3>
-        <div class="evidence-grid">
-            {% for slot in string_slots | list + bool_slots | list %}
-            <div class="evidence-row" data-slot="{{ slot }}">
-                <label for="evidence-{{ slot }}">{{ slot }}</label>
-                <textarea id="evidence-{{ slot }}"
-                          name="evidence_{{ slot }}"
-                          rows="2"
-                          placeholder="Evidence for {{ slot }}..."
-                          onchange="updateEvidence('{{ slot }}', this.value)">{{ entry.gold.evidence[slot] if entry.gold.evidence and entry.gold.evidence[slot] else '' }}</textarea>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- QA Hint -->
-    <div class="qa-hint-section">
-        <h3>QA Hint</h3>
-        <textarea id="qa-hint"
-                  name="qa_hint"
-                  rows="2"
-                  placeholder="Optional QA hint..."
-                  onchange="updateQaHint(this.value)">{{ entry.qa_hint if entry.qa_hint else '' }}</textarea>
-    </div>
-
     <!-- Actions -->
     <div class="entry-actions">
         <button class="btn {% if entry.reviewed %}btn-success{% else %}btn-secondary{% endif %}"
@@ -128,6 +101,16 @@
     // Update progress indicator
     document.getElementById('current-index').textContent = {{ index + 1 }};
     window.currentEntryIndex = {{ index }};
+
+    // Sync reviewed status to sidebar
+    const fileItem = document.querySelector(`.file-item[data-file-id="${window.currentFileId}"]`);
+    if (fileItem) {
+        {% if entry.reviewed %}
+        fileItem.classList.add('reviewed');
+        {% else %}
+        fileItem.classList.remove('reviewed');
+        {% endif %}
+    }
 
     // Initialize validation
     if (typeof initValidation === 'function') {

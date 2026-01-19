@@ -12,7 +12,16 @@ slots:
   name:
     type: string
 
-  location:
+  city:
+    type: string
+
+  address:
+    type: string
+
+  specialist:
+    type: string
+
+  specialist_name:
     type: string
 
   treatment:

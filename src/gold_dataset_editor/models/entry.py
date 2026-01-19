@@ -81,7 +81,10 @@ BOOL_SLOTS = {"is_first_time", "has_contraindications", "is_consultation", "can_
 STRING_SLOTS = {
     "number_phone",
     "name",
-    "location",
+    "city",
+    "address",
+    "specialist",
+    "specialist_name",
     "treatment",
     "date_time",
     # Treatment-specific slots

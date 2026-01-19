@@ -66,21 +66,6 @@ function loadEntry(index) {
 }
 
 /**
- * Jump to a specific entry (prompt for index)
- */
-function jumpToEntry() {
-    const input = prompt(`Jump to entry (1-${window.totalEntries}):`, window.currentEntryIndex + 1);
-    if (input !== null) {
-        const index = parseInt(input) - 1;
-        if (index >= 0 && index < window.totalEntries) {
-            loadEntry(index);
-        } else {
-            showToast('Invalid entry number', 'error');
-        }
-    }
-}
-
-/**
  * Update navigation button states
  */
 function updateNavigationButtons() {
@@ -342,6 +327,16 @@ async function toggleReviewed() {
                     btn.textContent = 'Mark as Reviewed';
                 }
             }
+
+            // Update sidebar item color
+            const fileItem = document.querySelector(`.file-item[data-file-id="${window.currentFileId}"]`);
+            if (fileItem) {
+                if (data.entry.reviewed) {
+                    fileItem.classList.add('reviewed');
+                } else {
+                    fileItem.classList.remove('reviewed');
+                }
+            }
         } else {
             showToast('Failed to toggle reviewed status', 'error');
         }
@@ -422,28 +417,6 @@ function markAsSaved() {
  */
 function setActiveSlot(slotName) {
     window.activeSlot = slotName;
-}
-
-/**
- * Apply filters to entry list
- */
-function applyFilters() {
-    // This would typically trigger a reload with filter parameters
-    // For now, we'll implement client-side filtering or reload
-    console.log('Filters applied');
-}
-
-/**
- * Handle search input key events
- */
-function handleSearchKey(event) {
-    if (event.key === 'Enter') {
-        const query = event.target.value;
-        if (query && window.currentFileId) {
-            // Implement search functionality
-            console.log('Search for:', query);
-        }
-    }
 }
 
 /**

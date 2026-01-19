@@ -70,50 +70,6 @@ body {
     white-space: nowrap;
 }
 
-/* Filters */
-.filters {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.filters h3 {
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-secondary);
-}
-
-.filter-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-    font-size: 0.875rem;
-}
-
-.filter-option input[type="checkbox"] {
-    accent-color: var(--accent);
-}
-
-.search-box {
-    margin-top: 0.75rem;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 0.5rem;
-    background: var(--input-bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-}
-
-.search-box input:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
 /* File List */
 .file-list {
     flex: 1;
@@ -171,6 +127,20 @@ body {
 .file-item.active .entry-count {
     background: rgba(255,255,255,0.2);
     color: white;
+}
+
+.file-item.reviewed a {
+    background: var(--success);
+    color: var(--bg-primary);
+}
+
+.file-item.reviewed .file-name {
+    color: var(--bg-primary);
+}
+
+.file-item.reviewed .entry-count {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--bg-primary);
 }
 
 /* Main Content */
