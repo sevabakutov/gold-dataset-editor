@@ -86,6 +86,7 @@ INTENTION_TYPES = [
     "reschedule_appointment",
     "cancel_appointment",
     "ask_about_the_price",
+    "end_conversation",
 ]
 
 # Slot type definitions (ordered for UI display)
