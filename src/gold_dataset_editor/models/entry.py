@@ -89,6 +89,7 @@ INTENTION_TYPES = [
     "ask_about_the_price",
     "appointment_availability",
     "end_conversation",
+    "get_certificate",
 ]
 
 # Slot type definitions (ordered for UI display)
