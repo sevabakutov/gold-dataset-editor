@@ -85,6 +85,7 @@ INTENTION_TYPES = [
     "book_appointment",
     "reschedule_appointment",
     "cancel_appointment",
+    "existing_appointment",
     "ask_about_the_price",
     "appointment_availability",
     "end_conversation",
