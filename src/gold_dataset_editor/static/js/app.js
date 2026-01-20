@@ -615,6 +615,130 @@ async function toggleReviewed() {
 }
 
 /**
+ * Skip the current file
+ */
+async function skipFile() {
+    if (!window.currentFileId) return;
+
+    try {
+        const response = await fetch(`/api/files/${window.currentFileId}/skip`, {
+            method: 'POST',
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            showToast(data.message + '. Updating sidebar...', 'success');
+            // Reload page to update sidebar
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            const errorData = await response.json();
+            showToast('Failed to skip file: ' + (errorData.detail || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error skipping file:', error);
+        showToast('Error skipping file', 'error');
+    }
+}
+
+/**
+ * Clean all slots and intents for the current entry
+ */
+async function cleanSlotsAndIntents() {
+    if (!window.currentFileId) return;
+
+    // Collect all slots to clear
+    const slotsToUpdate = {};
+
+    // Clear all string/text input slots
+    document.querySelectorAll('.slot-row.string-slot').forEach(row => {
+        const slotName = row.dataset.slot;
+        if (slotName) {
+            slotsToUpdate[slotName] = null;
+            const input = row.querySelector('.slot-input');
+            if (input) {
+                input.value = '';
+            }
+        }
+    });
+
+    // Clear all multi-select slots
+    document.querySelectorAll('.slot-row.multi-select-slot').forEach(row => {
+        const slotName = row.dataset.slot;
+        if (slotName) {
+            slotsToUpdate[slotName] = null;
+            // Clear UI tags
+            const tagsContainer = document.getElementById(`tags-${slotName}`);
+            if (tagsContainer) {
+                tagsContainer.innerHTML = '<span class="placeholder">null</span>';
+            }
+            // Uncheck all dropdown options
+            const dropdown = document.getElementById(`dropdown-${slotName}`);
+            if (dropdown) {
+                dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            }
+        }
+    });
+
+    // Clear all boolean slots
+    document.querySelectorAll('.slot-row.bool-slot').forEach(row => {
+        const slotName = row.dataset.slot;
+        if (slotName) {
+            slotsToUpdate[slotName] = null;
+            // Update UI
+            const tristate = row.querySelector('.tristate');
+            if (tristate) {
+                tristate.querySelectorAll('.ts-btn').forEach(btn => btn.classList.remove('active'));
+                tristate.querySelector('.ts-null').classList.add('active');
+                tristate.dataset.value = 'null';
+            }
+        }
+    });
+
+    // Clear all intentions
+    const intentionCheckboxes = document.querySelectorAll('.intentions-grid input[type="checkbox"]');
+    intentionCheckboxes.forEach(cb => cb.checked = false);
+
+    try {
+        // Send slots update to server
+        if (Object.keys(slotsToUpdate).length > 0) {
+            const slotsResponse = await fetch(`/api/files/${window.currentFileId}/entries/${window.currentEntryIndex}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ slots: slotsToUpdate })
+            });
+
+            if (!slotsResponse.ok) {
+                showToast('Failed to clear slots', 'error');
+                return;
+            }
+        }
+
+        // Send intentions update to server (empty array)
+        const intentionsResponse = await fetch(`/api/files/${window.currentFileId}/entries/${window.currentEntryIndex}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ intentions: [] })
+        });
+
+        if (intentionsResponse.ok) {
+            markAsUnsaved();
+            showToast('Slots and intents cleared', 'success');
+        } else {
+            showToast('Failed to clear intentions', 'error');
+        }
+    } catch (error) {
+        console.error('Error clearing slots and intents:', error);
+        showToast('Error clearing slots and intents', 'error');
+    }
+}
+
+/**
  * Save changes to file
  */
 async function saveFile() {

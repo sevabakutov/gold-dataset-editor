@@ -59,6 +59,12 @@ document.addEventListener('keydown', function(event) {
             toggleReviewed();
             break;
 
+        case 's':
+            // Skip file
+            event.preventDefault();
+            skipFile();
+            break;
+
         case '/':
             // Focus search
             event.preventDefault();

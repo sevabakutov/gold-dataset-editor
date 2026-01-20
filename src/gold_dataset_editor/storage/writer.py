@@ -233,3 +233,66 @@ def write_working_copy(
     write_jsonl_atomic(output_path, entries)
 
     return output_path
+
+
+def compute_skipped_path(
+    source_path: Path,
+    data_root: Path,
+    skipped_root: Path | None = None,
+) -> Path:
+    """Compute the output path for a skipped file.
+
+    Args:
+        source_path: Path to the original JSONL file
+        data_root: Root directory for JSONL files
+        skipped_root: Optional custom output directory. If None, uses {data_root}/../skipped/
+
+    Returns:
+        Path where the skipped file should be written
+    """
+    source_path = Path(source_path).resolve()
+    data_root = Path(data_root).resolve()
+
+    # Determine output root first
+    if skipped_root is not None:
+        output_root = Path(skipped_root).resolve()
+    else:
+        output_root = data_root.parent / "skipped"
+
+    # Get relative path - check data_root first, then skipped_root
+    try:
+        relative_path = source_path.relative_to(data_root)
+    except ValueError:
+        # source_path is not under data_root, check if it's under skipped_root
+        try:
+            relative_path = source_path.relative_to(output_root)
+        except ValueError:
+            # Not under either root, use just the filename
+            relative_path = Path(source_path.name)
+
+    return output_root / relative_path
+
+
+def write_skipped_copy(
+    source_path: Path,
+    entries: list[dict],
+    data_root: Path,
+    skipped_root: Path | None = None,
+) -> Path:
+    """Write full entries (not cleaned) to the skipped directory.
+
+    Args:
+        source_path: Path to the original JSONL file
+        entries: List of entries to write (without cleaning)
+        data_root: Root directory for JSONL files
+        skipped_root: Optional custom output directory
+
+    Returns:
+        Path to the written file
+    """
+    output_path = compute_skipped_path(source_path, data_root, skipped_root)
+
+    # Write atomically WITHOUT cleaning - preserves all fields
+    write_jsonl_atomic(output_path, entries)
+
+    return output_path

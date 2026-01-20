@@ -63,11 +63,18 @@ async def index(request: Request):
     if reviewed_root.exists():
         reviewed_files = index_directory(reviewed_root)
 
-    # Get set of reviewed file names (relative paths)
-    reviewed_names = {f.relative_path for f in reviewed_files}
+    # Get files from skipped folder
+    skipped_root = settings.skipped_output_dir or (settings.data_root.parent / "skipped")
+    skipped_files = []
+    if skipped_root.exists():
+        skipped_files = index_directory(skipped_root)
 
-    # Filter output files - exclude those already in reviewed
-    pending_files = [f for f in output_files if f.relative_path not in reviewed_names]
+    # Get set of reviewed and skipped file names (relative paths)
+    reviewed_names = {f.relative_path for f in reviewed_files}
+    skipped_names = {f.relative_path for f in skipped_files}
+
+    # Filter output files - exclude those already in reviewed or skipped
+    pending_files = [f for f in output_files if f.relative_path not in reviewed_names and f.relative_path not in skipped_names]
 
     return templates.TemplateResponse(
         "index.html",
@@ -75,6 +82,7 @@ async def index(request: Request):
             "request": request,
             "reviewed_files": reviewed_files,
             "pending_files": pending_files,
+            "skipped_files": skipped_files,
             "data_root": str(settings.data_root),
         },
     )
@@ -86,10 +94,11 @@ async def partial_file(request: Request, file_id: str):
     from gold_dataset_editor.storage.indexer import get_file_by_id
     from gold_dataset_editor.storage.reader import read_jsonl
 
-    # Determine reviewed_root
+    # Determine reviewed_root and skipped_root
     reviewed_root = settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+    skipped_root = settings.skipped_output_dir or (settings.data_root.parent / "skipped")
 
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         return templates.TemplateResponse(
             "partials/error.html",
@@ -118,10 +127,11 @@ async def partial_entry(request: Request, file_id: str, index: int):
     from gold_dataset_editor.storage.reader import read_jsonl
     from gold_dataset_editor.models.entry import BOOL_SLOTS, STRING_SLOTS, INTENTION_TYPES, MULTI_SELECT_SLOTS, SLOT_OPTIONS
 
-    # Determine reviewed_root
+    # Determine reviewed_root and skipped_root
     reviewed_root = settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+    skipped_root = settings.skipped_output_dir or (settings.data_root.parent / "skipped")
 
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         return templates.TemplateResponse(
             "partials/error.html",

@@ -54,6 +54,28 @@
                 </ul>
             </div>
             {% endif %}
+
+            <!-- Skipped Section -->
+            {% if skipped_files %}
+            <div class="file-section">
+                <h3 class="section-header skipped">Skipped ({{ skipped_files|length }})</h3>
+                <ul class="file-tree">
+                    {% for file in skipped_files %}
+                    <li class="file-item skipped" data-file-id="{{ file.relative_path | replace('/', '__') }}">
+                        <a href="#"
+                           hx-get="/partial/file/{{ file.relative_path | replace('/', '__') }}"
+                           hx-target="#main-content"
+                           hx-swap="innerHTML"
+                           onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
+                           title="{{ file.relative_path }}">
+                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="entry-count">{{ file.entry_count }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </aside>
 
@@ -65,7 +87,8 @@
             <div class="stats">
                 <p><strong>{{ reviewed_files|length }}</strong> reviewed files</p>
                 <p><strong>{{ pending_files|length }}</strong> pending files</p>
-                <p><strong>{{ (reviewed_files + pending_files)|sum(attribute='entry_count') }}</strong> total entries</p>
+                <p><strong>{{ skipped_files|length }}</strong> skipped files</p>
+                <p><strong>{{ (reviewed_files + pending_files + skipped_files)|sum(attribute='entry_count') }}</strong> total entries</p>
             </div>
             <div class="shortcuts-hint">
                 <h3>Keyboard Shortcuts</h3>
@@ -73,6 +96,7 @@
                     <li><kbd>j</kbd> / <kbd>k</kbd> - Next / Previous entry</li>
                     <li><kbd>Ctrl+S</kbd> - Save changes</li>
                     <li><kbd>r</kbd> - Toggle reviewed</li>
+                    <li><kbd>s</kbd> - Skip file</li>
                     <li><kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> - True / False / Null (for bool slots)</li>
                     <li><kbd>/</kbd> - Focus search</li>
                     <li><kbd>Esc</kbd> - Clear focus</li>

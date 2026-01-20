@@ -9,12 +9,18 @@ from gold_dataset_editor.config import settings
 from gold_dataset_editor.models.entry import EntryUpdate, BOOL_SLOTS
 from gold_dataset_editor.storage.indexer import get_file_by_id
 from gold_dataset_editor.storage.reader import read_jsonl
-from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup, write_reviewed_file, write_working_copy
+from gold_dataset_editor.storage.writer import update_entry, write_jsonl_atomic, create_backup, write_reviewed_file, write_working_copy, write_skipped_copy
 
 
 def _get_reviewed_root():
     """Get the reviewed root directory."""
     return settings.reviewed_output_dir or (settings.data_root.parent / "reviewed")
+
+
+def _get_skipped_root():
+    """Get the skipped root directory."""
+    return settings.skipped_output_dir or (settings.data_root.parent / "skipped")
+
 
 router = APIRouter()
 
@@ -58,7 +64,8 @@ async def list_entries(
 ) -> EntriesListResponse:
     """List entries for a file with optional filtering and pagination."""
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -220,7 +227,8 @@ async def get_entry(file_id: str, index: int) -> EntryResponse:
     from gold_dataset_editor.app import edit_session
 
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -246,7 +254,8 @@ async def patch_entry(file_id: str, index: int, update: EntryUpdate) -> EntryRes
     from gold_dataset_editor.app import edit_session
 
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -436,7 +445,8 @@ async def mark_reviewed(file_id: str, index: int) -> EntryResponse:
     logger = logging.getLogger(__name__)
 
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -493,7 +503,8 @@ async def save_file(file_id: str) -> SaveResponse:
     from gold_dataset_editor.app import edit_session
 
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -537,7 +548,8 @@ async def search_entries(
 ) -> EntriesListResponse:
     """Search entries in a file."""
     reviewed_root = _get_reviewed_root()
-    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root)
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -555,4 +567,56 @@ async def search_entries(
         total=len(results),
         page=1,
         page_size=len(results),
+    )
+
+
+class SkipResponse(BaseModel):
+    """Response for skip operation."""
+
+    success: bool
+    message: str
+    skipped_path: str | None = None
+
+
+@router.post("/{file_id:path}/skip")
+async def skip_file(file_id: str) -> SkipResponse:
+    """Skip a file by copying it to the skipped directory."""
+    from gold_dataset_editor.app import edit_session
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    reviewed_root = _get_reviewed_root()
+    skipped_root = _get_skipped_root()
+    file_info = get_file_by_id(settings.data_root, file_id, reviewed_root=reviewed_root, skipped_root=skipped_root)
+    if not file_info:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Read current file entries
+    entries = read_jsonl(file_info.path)
+
+    # Merge any unsaved session changes
+    file_str = str(file_info.path)
+    for (path_str, idx), modified_entry in edit_session.unsaved_changes.items():
+        if path_str == file_str and 0 <= idx < len(entries):
+            entries[idx] = modified_entry
+
+    # Write to skipped directory
+    try:
+        skipped_path = write_skipped_copy(
+            file_info.path,
+            entries,
+            settings.data_root,
+            settings.skipped_output_dir,
+        )
+        edit_session.mark_saved(file_info.path)
+        logger.info(f"Skipped file copied to: {skipped_path}")
+    except Exception as e:
+        logger.error(f"Failed to skip file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to skip file: {e}")
+
+    return SkipResponse(
+        success=True,
+        message=f"Skipped {file_info.relative_path}",
+        skipped_path=str(skipped_path),
     )

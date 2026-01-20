@@ -60,15 +60,21 @@ def index_directory(root: Path) -> list[FileInfo]:
     return files
 
 
-def get_file_by_id(root: Path, file_id: str, reviewed_root: Path | None = None) -> FileInfo | None:
+def get_file_by_id(
+    root: Path,
+    file_id: str,
+    reviewed_root: Path | None = None,
+    skipped_root: Path | None = None,
+) -> FileInfo | None:
     """Get FileInfo for a specific file by its ID (relative path).
 
-    Checks reviewed folder first if provided, then falls back to data_root.
+    Checks reviewed folder first, then skipped folder, then falls back to data_root.
 
     Args:
         root: Root directory (data_root)
         file_id: Relative path of the file (URL-encoded slashes replaced with __)
         reviewed_root: Optional reviewed folder to check first
+        skipped_root: Optional skipped folder to check second
 
     Returns:
         FileInfo if found, None otherwise
@@ -96,6 +102,30 @@ def get_file_by_id(root: Path, file_id: str, reviewed_root: Path | None = None) 
 
             return FileInfo(
                 path=reviewed_path,
+                relative_path=relative_path,
+                entry_count=entry_count,
+                last_modified=datetime.fromtimestamp(stat.st_mtime),
+                size_bytes=stat.st_size,
+            )
+
+    # Check skipped folder second if provided
+    if skipped_root:
+        skipped_root = Path(skipped_root).resolve()
+        skipped_path = skipped_root / relative_path
+
+        if skipped_path.exists() and skipped_path.is_file():
+            if not str(skipped_path.resolve()).startswith(str(skipped_root)):
+                # Security: prevent path traversal
+                return None
+
+            stat = skipped_path.stat()
+            try:
+                entry_count = count_entries(skipped_path)
+            except Exception:
+                entry_count = 0
+
+            return FileInfo(
+                path=skipped_path,
                 relative_path=relative_path,
                 entry_count=entry_count,
                 last_modified=datetime.fromtimestamp(stat.st_mtime),

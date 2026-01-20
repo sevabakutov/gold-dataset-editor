@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     slots_schema: Path = Field(default=Path("slots_schema.yaml"), description="Path to slots schema")
     edits_log: Path = Field(default=Path("edits.log"), description="Path to audit log")
     reviewed_output_dir: Path | None = Field(default=None, description="Output directory for reviewed files")
+    skipped_output_dir: Path | None = Field(default=None, description="Output directory for skipped files")
 
     model_config = {"env_prefix": "GOLD_EDITOR_"}
 
