@@ -15,8 +15,9 @@ pip install -e .
 # Install with dev dependencies
 pip install -e ".[dev]"
 
-# Run the editor
+# Run the editor (two ways)
 python -m gold_dataset_editor --data-root /path/to/jsonl/files
+gold-dataset-editor --data-root /path/to/jsonl/files
 
 # Run with auto-reload for development
 python -m gold_dataset_editor --data-root ./data --reload
@@ -29,6 +30,10 @@ pytest tests/test_reader.py
 
 # Run single test
 pytest tests/test_reader.py::test_function_name
+
+# Docker
+docker build -t gold-dataset-editor .
+docker run -p 8000:8000 -v /path/to/data:/data gold-dataset-editor
 ```
 
 ## Architecture
@@ -45,15 +50,21 @@ pytest tests/test_reader.py::test_function_name
 
 - **Storage layer** (`storage/`):
   - `reader.py`: JSONL parsing with lazy loading option
-  - `writer.py`: Atomic writes using temp file + rename pattern, backup creation, audit logging
+  - `writer.py`: Atomic writes using temp file + rename pattern, backup creation, audit logging. Handles reviewed/skipped output directories.
   - `indexer.py`: File discovery, file IDs use `__` as path separator for URL safety
+  - `cleaner.py`: Removes evidence, qa_hint, and null slots for final reviewed output
 
-- **Entry model** (`models/entry.py`): Pydantic models use `extra="allow"` to preserve unknown fields. Defines slot types (`STRING_SLOTS`, `BOOL_SLOTS`), multi-select slots with predefined options (`SLOT_OPTIONS`).
+- **Entry model** (`models/entry.py`): Pydantic models use `extra="allow"` to preserve unknown fields. Defines:
+  - `STRING_SLOTS`: treatment, hair_removal_areas, number_phone, name, date_time, city, address, etc.
+  - `BOOL_SLOTS`: has_contraindications, is_first_time, can_visit_center, is_consultation
+  - `INTENTION_TYPES`: greet, book_appointment, cancel_appointment, etc.
+  - `SLOT_OPTIONS`: Predefined dropdown options for multi-select slots
 
 ### API Structure
 - `/api/files/` - File listing and stats
 - `/api/files/{file_id}/entries` - Entry CRUD with pagination and filters
-- `/api/files/{file_id}/save` - Persist unsaved changes to disk
+- `/api/files/{file_id}/save` - Persist unsaved changes to reviewed directory
+- `/api/files/{file_id}/skip` - Move file to skipped directory
 - `/api/export/` - Statistics export
 
 ### Frontend
@@ -68,7 +79,11 @@ When a message role is changed, the system propagates the change to all entries 
 
 Environment variables (prefix `GOLD_EDITOR_`):
 - `GOLD_EDITOR_DATA_ROOT` - Root directory for JSONL files
+- `GOLD_EDITOR_HOST` - Host to bind to (default: 127.0.0.1)
+- `GOLD_EDITOR_PORT` - Port to bind to (default: 8000)
 - `GOLD_EDITOR_BACKUP_ON_SAVE` - Create backup before saving (default: true)
+- `GOLD_EDITOR_REVIEWED_OUTPUT_DIR` - Output directory for reviewed files (default: {data_root}/../reviewed/)
+- `GOLD_EDITOR_SKIPPED_OUTPUT_DIR` - Output directory for skipped files (default: {data_root}/../skipped/)
 
 ## Testing
 

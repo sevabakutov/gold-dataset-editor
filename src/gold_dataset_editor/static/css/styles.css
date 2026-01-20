@@ -185,6 +185,28 @@ body {
     color: var(--bg-primary);
 }
 
+/* Off-hours badge */
+.off-hours-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: #6366f1;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.file-item.reviewed .off-hours-badge,
+.file-item.skipped .off-hours-badge {
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--bg-primary);
+}
+
 /* Main Content */
 .main-content {
     flex: 1;

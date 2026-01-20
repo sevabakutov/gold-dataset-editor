@@ -1,6 +1,7 @@
 """JSONL file reader with support for lazy loading."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Iterator
 
@@ -142,3 +143,40 @@ def count_entries(path: Path) -> int:
             if line.strip():
                 count += 1
     return count
+
+
+def is_first_message_off_hours(path: Path) -> bool:
+    """Check if the first message of the first entry was sent outside working hours.
+
+    Working hours are defined as 8:00 to 21:00 (inclusive start, exclusive end).
+
+    Args:
+        path: Path to the JSONL file
+
+    Returns:
+        True if the first message was sent outside working hours (before 8:00 or at/after 21:00),
+        False otherwise or if timestamp cannot be determined.
+    """
+    try:
+        first_entry = read_entry_by_index(path, 0)
+        if not first_entry:
+            return False
+
+        # Get timestamp from message field
+        message = first_entry.get("message", {})
+        if isinstance(message, dict):
+            ts_ms = message.get("ts_ms")
+        else:
+            return False
+
+        if ts_ms is None:
+            return False
+
+        # Convert milliseconds to datetime
+        dt = datetime.fromtimestamp(ts_ms / 1000)
+        hour = dt.hour
+
+        # Off-hours: before 8:00 or at/after 21:00
+        return hour < 8 or hour >= 21
+    except Exception:
+        return False

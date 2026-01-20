@@ -24,7 +24,7 @@
                            hx-swap="innerHTML"
                            onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
                            title="{{ file.relative_path }}">
-                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="file-name">{% if file.is_off_hours %}<span class="off-hours-badge" title="First message sent outside working hours (8:00-21:00)">N</span>{% endif %}{{ file.relative_path }}</span>
                             <span class="entry-count">{{ file.entry_count }}</span>
                         </a>
                     </li>
@@ -46,7 +46,7 @@
                            hx-swap="innerHTML"
                            onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
                            title="{{ file.relative_path }}">
-                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="file-name">{% if file.is_off_hours %}<span class="off-hours-badge" title="First message sent outside working hours (8:00-21:00)">N</span>{% endif %}{{ file.relative_path }}</span>
                             <span class="entry-count">{{ file.entry_count }}</span>
                         </a>
                     </li>
@@ -68,7 +68,7 @@
                            hx-swap="innerHTML"
                            onclick="selectFile(this, '{{ file.relative_path | replace('/', '__') }}')"
                            title="{{ file.relative_path }}">
-                            <span class="file-name">{{ file.relative_path }}</span>
+                            <span class="file-name">{% if file.is_off_hours %}<span class="off-hours-badge" title="First message sent outside working hours (8:00-21:00)">N</span>{% endif %}{{ file.relative_path }}</span>
                             <span class="entry-count">{{ file.entry_count }}</span>
                         </a>
                     </li>

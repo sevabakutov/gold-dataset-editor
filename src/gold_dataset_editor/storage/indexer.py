@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from gold_dataset_editor.storage.reader import count_entries
+from gold_dataset_editor.storage.reader import count_entries, is_first_message_off_hours
 
 
 @dataclass
@@ -16,6 +16,7 @@ class FileInfo:
     entry_count: int
     last_modified: datetime
     size_bytes: int
+    is_off_hours: bool = False
 
     @property
     def display_name(self) -> str:
@@ -45,6 +46,11 @@ def index_directory(root: Path) -> list[FileInfo]:
         except Exception:
             entry_count = 0
 
+        try:
+            off_hours = is_first_message_off_hours(path)
+        except Exception:
+            off_hours = False
+
         files.append(
             FileInfo(
                 path=path,
@@ -52,6 +58,7 @@ def index_directory(root: Path) -> list[FileInfo]:
                 entry_count=entry_count,
                 last_modified=datetime.fromtimestamp(stat.st_mtime),
                 size_bytes=stat.st_size,
+                is_off_hours=off_hours,
             )
         )
 
@@ -100,12 +107,18 @@ def get_file_by_id(
             except Exception:
                 entry_count = 0
 
+            try:
+                off_hours = is_first_message_off_hours(reviewed_path)
+            except Exception:
+                off_hours = False
+
             return FileInfo(
                 path=reviewed_path,
                 relative_path=relative_path,
                 entry_count=entry_count,
                 last_modified=datetime.fromtimestamp(stat.st_mtime),
                 size_bytes=stat.st_size,
+                is_off_hours=off_hours,
             )
 
     # Check skipped folder second if provided
@@ -124,12 +137,18 @@ def get_file_by_id(
             except Exception:
                 entry_count = 0
 
+            try:
+                off_hours = is_first_message_off_hours(skipped_path)
+            except Exception:
+                off_hours = False
+
             return FileInfo(
                 path=skipped_path,
                 relative_path=relative_path,
                 entry_count=entry_count,
                 last_modified=datetime.fromtimestamp(stat.st_mtime),
                 size_bytes=stat.st_size,
+                is_off_hours=off_hours,
             )
 
     # Fall back to data_root
@@ -148,12 +167,18 @@ def get_file_by_id(
     except Exception:
         entry_count = 0
 
+    try:
+        off_hours = is_first_message_off_hours(path)
+    except Exception:
+        off_hours = False
+
     return FileInfo(
         path=path,
         relative_path=relative_path,
         entry_count=entry_count,
         last_modified=datetime.fromtimestamp(stat.st_mtime),
         size_bytes=stat.st_size,
+        is_off_hours=off_hours,
     )
 
 
